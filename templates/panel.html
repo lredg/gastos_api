@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Mis Gastos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f7f7f7;
+        }
+        h1 {
+            color: #333;
+        }
+        .total {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #444;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        th, td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #eee;
+            text-align: left;
+        }
+        tr:hover {
+            background: #f1f1f1;
+        }
+        .importe {
+            font-weight: bold;
+            color: #2b7a0b;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Movimientos</h1>
+
+<div class="total">
+    Total gastado: {{ total }} €
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Comercio</th>
+            <th>Importe</th>
+            <th>Fecha</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for g in gastos %}
+        <tr>
+            <td>{{ g.id }}</td>
+            <td>{{ g.nombre_comercio }}</td>
+            <td class="importe">{{ g.valor }} €</td>
+            <td>{{ g.created_at }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+</body>
+</html>
