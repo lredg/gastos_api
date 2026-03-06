@@ -8,6 +8,29 @@ from pydantic import BaseModel, Field, condecimal
 import httpx
 from dotenv import load_dotenv
 
+# Categorización automática según nombre del comercio
+CATEGORIZACION_SUPERMERCADOS = ["MERC", "ALIMER", "CARREFO", "LIDL", "DIA", "ALCAMPO"]
+CATEGORIZACION_GASOLINA = ["REPSOL", "CEPSA", "SHELL", "BP"]
+CATEGORIZACION_RESTAURANTES = ["BAR", "REST", "CAFETER", "PIZZA", "BURGER", "MC", "KFC"]
+
+def categorizar(nombre: str) -> str:
+    if not nombre:
+        return "Otros"
+    nombre = nombre.upper()
+
+    for w in CATEGORIZACION_SUPERMERCADOS:
+        if w in nombre:
+            return "Supermercado"
+
+    for w in CATEGORIZACION_GASOLINA:
+        if w in nombre:
+            return "Gasolina"
+
+    for w in CATEGORIZACION_RESTAURANTES:
+        if w in nombre:
+            return "Restauración"
+
+    return "Otros"
 
 load_dotenv()
 
@@ -143,5 +166,80 @@ async def panel(request: Request):
             "total": f"{total:.2f}"
         }
     )
+
+@app.get("/dashboard-data")
+async def dashboard_data():
+    url = f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLE}"
+    headers = {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+    }
+    params = {"select": "*", "order": "created_at.desc"}
+
+    async with httpx.AsyncClient() as client:
+        r = await client.get(url, headers=headers, params=params)
+
+    gastos = r.json()
+
+    # Añadimos categoría automática
+    for g in gastos:
+        g["categoria"] = categorizar(g["nombre_comercio"])
+
+    # Total del mes
+    from datetime import datetime
+    ahora = datetime.utcnow().month
+    total_mes = sum(g["valor"] for g in gastos 
+                    if datetime.fromisoformat(g["created_at"].replace("Z","")).month == ahora)
+
+    # Totales por categoría
+    cat_totals = {}
+    for g in gastos:
+        cat_totals[g["categoria"]] = cat_totals.get(g["categoria"], 0) + g["valor"]
+
+    return {
+        "gastos": gastos,
+        "total_mes": total_mes,
+        "categorias": cat_totals,
+    }
+
+@app.post("/gastos/delete/{gasto_id}")
+async def borrar_gasto(gasto_id: int):
+    url = f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLE}?id=eq.{gasto_id}"
+    headers = {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "Prefer": "return=minimal"
+    }
+
+    async with httpx.AsyncClient() as client:
+        r = await client.delete(url, headers=headers)
+
+    return {"ok": True}
+
+class GastoEdit(BaseModel):
+    nombre_comercio: str
+    valor: float
+
+@app.post("/gastos/edit/{gasto_id}")
+async def editar_gasto(gasto_id: int, gasto: GastoEdit):
+    payload = {
+        "nombre_comercio": gasto.nombre_comercio.strip(),
+        "valor": gasto.valor,
+    }
+
+    url = f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLE}?id=eq.{gasto_id}"
+    headers = {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    }
+
+    async with httpx.AsyncClient() as client:
+        r = await client.patch(url, json=payload, headers=headers)
+
+    updated = r.json()[0]
+    updated["categoria"] = categorizar(updated["nombre_comercio"])
+    return updated
 
 

@@ -1,73 +1,200 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <title>Mis Gastos</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background: #f7f7f7;
-        }
-        h1 {
-            color: #333;
-        }
-        .total {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            color: #444;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-        }
-        th, td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background: #eee;
-            text-align: left;
-        }
-        tr:hover {
-            background: #f1f1f1;
-        }
-        .importe {
-            font-weight: bold;
-            color: #2b7a0b;
-        }
-    </style>
+<meta charset="UTF-8" />
+<title>Panel de Gastos</title>
+https://cdn.jsdelivr.net/npm/chart.js</script>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+header {
+    background: #0066cc;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+.container {
+    padding: 20px;
+}
+.card {
+    background: white;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+th, td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+th {
+    background: #fafafa;
+    text-align: left;
+}
+tr:hover { background: #f1f1f1; cursor: pointer; }
+
+/* Modal */
+.modal-bg {
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.5);
+}
+.modal {
+    background:white;
+    width:90%;
+    max-width:400px;
+    margin:100px auto;
+    padding:20px;
+    border-radius:8px;
+}
+.modal input {
+    width:100%;
+    padding:8px;
+    margin-bottom:10px;
+}
+button {
+    padding:10px 15px;
+    border:none;
+    background:#0066cc;
+    color:white;
+    border-radius:5px;
+    cursor:pointer;
+}
+button.danger {
+    background:#cc0000;
+}
+</style>
+
 </head>
 <body>
 
-<h1>Movimientos</h1>
+<header>
+<h1>Mis Gastos</h1>
+<p>Total mes: €<span id="total_mes">0.00</span></p>
+</header>
 
-<div class="total">
-    Total gastado: {{ total }} €
+<div class="container">
+
+<!-- GRAFICO CATEGORÍAS -->
+<div class="card">
+<h2>Gasto por Categoría</h2>
+<canvas id="pieChart"></canvas>
 </div>
 
-<table>
-    <thead>
+<!-- LISTA DE GASTOS -->
+<div class="card">
+<h2>Movimientos</h2>
+<table id="tabla"></table>
+</div>
+
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <h3>Editar gasto</h3>
+    <input id="edit_nombre" placeholder="Nombre comercio">
+    <input id="edit_valor" placeholder="Importe">
+    <button onclick="guardarEdicion()">Guardar</button>
+    <button class="danger" onclick="cerrarModal()">Cancelar</button>
+  </div>
+</div>
+
+<script>
+let gastosGlobal = [];
+let editId = null;
+
+async function cargarDatos() {
+    const r = await fetch("/dashboard-data");
+    const data = await r.json();
+
+    gastosGlobal = data.gastos;
+    document.getElementById("total_mes").innerText = data.total_mes.toFixed(2);
+
+    llenarTabla();
+    generarPie(data.categorias);
+}
+
+function llenarTabla() {
+    const tabla = document.getElementById("tabla");
+    tabla.innerHTML = `
+        <tr><th>ID</th><th>Comercio</th><th>Categoria</th><th>Valor</th><th>Fecha</th><th>Acciones</th></tr>
+    `;
+
+    gastosGlobal.forEach(g => {
+        tabla.innerHTML += `
         <tr>
-            <th>ID</th>
-            <th>Comercio</th>
-            <th>Importe</th>
-            <th>Fecha</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for g in gastos %}
-        <tr>
-            <td>{{ g.id }}</td>
-            <td>{{ g.nombre_comercio }}</td>
-            <td class="importe">{{ g.valor }} €</td>
-            <td>{{ g.created_at }}</td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
+            <td>${g.id}</td>
+            <td>${g.nombre_comercio}</td>
+            <td>${g.categoria}</td>
+            <td>€${g.valor.toFixed(2)}</td>
+            <td>${g.created_at}</td>
+            <td>
+                <button onclick="editar(${g.id})">Editar</button>
+                <button class="danger" onclick="eliminar(${g.id})">X</button>
+            </td>
+        </tr>`;
+    });
+}
+
+async function eliminar(id) {
+    if(!confirm("¿Eliminar gasto " + id + "?")) return;
+    await fetch("/gastos/delete/" + id, {method:"POST"});
+    cargarDatos();
+}
+
+function editar(id) {
+    const g = gastosGlobal.find(x => x.id === id);
+    editId = id;
+    document.getElementById("edit_nombre").value = g.nombre_comercio;
+    document.getElementById("edit_valor").value = g.valor;
+    document.getElementById("modal-bg").style.display = "block";
+}
+
+function cerrarModal() {
+    document.getElementById("modal-bg").style.display = "none";
+}
+
+async function guardarEdicion() {
+    const nombre = document.getElementById("edit_nombre").value;
+    const valor = parseFloat(document.getElementById("edit_valor").value);
+
+    await fetch("/gastos/edit/" + editId, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({nombre_comercio:nombre, valor:valor})
+    });
+    cerrarModal();
+    cargarDatos();
+}
+
+function generarPie(categorias) {
+    const ctx = document.getElementById("pieChart");
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(categorias),
+            datasets: [{
+                data: Object.values(categorias),
+                backgroundColor:["#0066cc","#00aa00","#cc6600","#999999"]
+            }]
+        }
+    });
+}
+
+cargarDatos();
+</script>
 
 </body>
 </html>
