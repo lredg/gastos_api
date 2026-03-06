@@ -1,7 +1,7 @@
 # main.py
 import os
 from typing import Optional
-
+from fastapi.responses import PlainTextResponse
 from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field, condecimal
@@ -82,7 +82,7 @@ async def listar_gastos(
 
 @app.get("/health")
 async def health():
-    return {"ok": True}
+    return PlainTextResponse("OK", status_code=200)
 
 
 @app.post("/webhook/gasto")
