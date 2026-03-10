@@ -104,8 +104,11 @@ button.danger {
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
     <h3>Editar gasto</h3>
+   
     <input id="edit_nombre" placeholder="Nombre comercio">
-    <input id="edit_valor" placeholder="Importe">
+    <input id="edit_valor" placeholder="Importe total">
+    <input id="edit_mi_parte" placeholder="Mi parte real">
+
     <button onclick="guardarEdicion()">Guardar</button>
     <button class="danger" onclick="cerrarModal()">Cancelar</button>
   </div>
@@ -129,7 +132,7 @@ async function cargarDatos() {
 function llenarTabla() {
     const tabla = document.getElementById("tabla");
     tabla.innerHTML = `
-        <tr><th>ID</th><th>Comercio</th><th>Categoria</th><th>Valor</th><th>Fecha</th><th>Acciones</th></tr>
+        <th>ID</th><th>Comercio</th><th>Categoría</th><th>Total</th><th>Mi parte</th><th>Fecha</th><th>Acciones</th>
     `;
 
     gastosGlobal.forEach(g => {
@@ -137,9 +140,11 @@ function llenarTabla() {
         <tr>
             <td>${g.id}</td>
             <td>${g.nombre_comercio}</td>
-            <td>${g.categoria}</td>
+            <td>${g.categoria}</td>           
             <td>€${g.valor.toFixed(2)}</td>
+            <td><strong>€${(g.mi_parte ?? g.valor).toFixed(2)}</strong></td>
             <td>${g.created_at}</td>
+
             <td>
                 <button onclick="editar(${g.id})">Editar</button>
                 <button class="danger" onclick="eliminar(${g.id})">X</button>
@@ -154,27 +159,37 @@ async function eliminar(id) {
     cargarDatos();
 }
 
+
 function editar(id) {
     const g = gastosGlobal.find(x => x.id === id);
     editId = id;
     document.getElementById("edit_nombre").value = g.nombre_comercio;
     document.getElementById("edit_valor").value = g.valor;
+    document.getElementById("edit_mi_parte").value = g.mi_parte ?? g.valor;
     document.getElementById("modal-bg").style.display = "block";
 }
+
 
 function cerrarModal() {
     document.getElementById("modal-bg").style.display = "none";
 }
 
+
 async function guardarEdicion() {
     const nombre = document.getElementById("edit_nombre").value;
     const valor = parseFloat(document.getElementById("edit_valor").value);
+    const miParte = parseFloat(document.getElementById("edit_mi_parte").value);
 
     await fetch("/gastos/edit/" + editId, {
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({nombre_comercio:nombre, valor:valor})
+        body: JSON.stringify({
+            nombre_comercio:nombre,
+            valor:valor,
+            mi_parte:miParte
+        })
     });
+
     cerrarModal();
     cargarDatos();
 }

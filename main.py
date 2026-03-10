@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field, condecimal
 import httpx
 from dotenv import load_dotenv
+from datetime import datetime
 
 # Categorización automática según nombre del comercio
 CATEGORIZACION_SUPERMERCADOS = ["MERC", "ALIMER", "CARREFO", "LIDL", "DIA", "ALCAMPO"]
@@ -50,6 +51,7 @@ class GastoIn(BaseModel):
     nombre_comercio: str = Field(..., min_length=1, description="Nombre del comercio")
     valor: condecimal(gt=0) = Field(..., description="Importe > 0")
     external_id: Optional[str] = Field(None, description="ID externo opcional para evitar duplicados")
+    reparto: Optional[int] = Field(None, description="Número de personas: 1, 2, 3… (None o 0 = todo para mí)")
 
 
 @app.get("/gastos")
@@ -95,13 +97,34 @@ async def webhook_gasto(
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     # 2) Normalización mínima
+    
+   
+    # Calcular "amount" como float
+    amount = float(gasto.valor)
+
+    # reparto puede venir None, 0, 1, 2, 3...
+    reparto = gasto.reparto if gasto.reparto is not None else 1
+
+    try:
+        reparto_int = int(reparto)
+    except Exception:
+        reparto_int = 1
+
+    # Cálculo correcto de mi_parte
+    # 0 o negativo → todo para ti
+    if reparto_int <= 0:
+        mi_parte = amount
+    else:
+        mi_parte = amount / reparto_int
+
     nombre = gasto.nombre_comercio.strip()
     if not nombre:
         raise HTTPException(status_code=422, detail="nombre_comercio vacío")
 
     payload = {
         "nombre_comercio": nombre,
-        "valor": float(gasto.valor),
+        "valor": amount,
+        "mi_parte": mi_parte
     }
     if gasto.external_id:
         payload["external_id"] = gasto.external_id.strip()
@@ -186,21 +209,36 @@ async def dashboard_data():
         g["categoria"] = categorizar(g["nombre_comercio"])
 
     # Total del mes
-    from datetime import datetime
-    ahora = datetime.utcnow().month
-    total_mes = sum(g["valor"] for g in gastos 
-                    if datetime.fromisoformat(g["created_at"].replace("Z","")).month == ahora)
+       
+    now = datetime.utcnow()
+    this_month = now.month
+    this_year = now.year
 
-    # Totales por categoría
+    def my_amount(row):
+        v = row.get("mi_parte")
+        if v is None:
+            v = row.get("valor", 0)
+        return float(v or 0)
+
+    total_mes = sum(
+        my_amount(g)
+        for g in gastos
+        if g.get("created_at") and datetime.fromisoformat(g["created_at"].replace("Z","")).month == this_month
+           and datetime.fromisoformat(g["created_at"].replace("Z","")).year == this_year
+    )
+
+    # Totales por categoría (también con mi_parte)
     cat_totals = {}
     for g in gastos:
-        cat_totals[g["categoria"]] = cat_totals.get(g["categoria"], 0) + g["valor"]
+        cat = g["categoria"]
+        cat_totals[cat] = cat_totals.get(cat, 0.0) + my_amount(g)
 
     return {
         "gastos": gastos,
-        "total_mes": total_mes,
-        "categorias": cat_totals,
+        "total_mes": round(total_mes, 2),
+        "categorias": {k: round(v, 2) for k, v in cat_totals.items()},
     }
+
 
 @app.post("/gastos/delete/{gasto_id}")
 async def borrar_gasto(gasto_id: int):
