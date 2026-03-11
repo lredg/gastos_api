@@ -6,6 +6,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+/* ---- ESTILO GENERAL ---- */
 body {
     font-family: Arial, sans-serif;
     background: #f4f4f4;
@@ -18,15 +19,40 @@ header {
     padding: 20px;
     text-align: center;
 }
+/* ---- CONTENEDOR ---- */
 .container {
     padding: 20px;
 }
+
+/* ---- TABS ---- */
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.tab-btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    background: #e0e0e0;
+    color: #333;
+    font-weight: bold;
+}
+.tab-btn.active {
+    background: #0066cc;
+    color: white;
+}
+
+/* ---- TARJETAS ---- */
 .card {
     background: white;
     padding: 15px;
     margin-bottom: 20px;
     border-radius: 8px;
 }
+
+/* ---- TABLAS ---- */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -42,7 +68,7 @@ th {
 }
 tr:hover { background: #f1f1f1; cursor: pointer; }
 
-/* MODAL */
+/* ---- MODALES ---- */
 .modal-bg {
     display:none;
     position:fixed;
@@ -53,7 +79,7 @@ tr:hover { background: #f1f1f1; cursor: pointer; }
 .modal {
     background:white;
     width:90%;
-    max-width:400px;
+    max-width:420px;
     margin:100px auto;
     padding:20px;
     border-radius:8px;
@@ -74,8 +100,8 @@ button {
 button.danger {
     background:#cc0000;
 }
-</style>
 
+</style>
 </head>
 <body>
 
@@ -86,22 +112,109 @@ button.danger {
 
 <div class="container">
 
-  <!-- LISTA DE GASTOS -->
-  <div class="card">
-    <h2>Movimientos</h2>
-    <button onclick="abrirModalNuevo()" style="margin-bottom:10px;">Añadir gasto</button>
-    <table id="tabla"></table>
+  <!-- ======================================= -->
+  <!-- TABS -->
+  <!-- ======================================= -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="openTab('general')">GENERAL</button>
+    <button class="tab-btn" onclick="openTab('graficos')">GRÁFICOS</button>
+    <button class="tab-btn" onclick="openTab('resumen')">RESUMEN</button>
+    <button style="margin-left:auto;" onclick="abrirModalFiltros()">Filtros 🔍</button>
   </div>
 
-  <!-- GRAFICO CATEGORÍAS -->
-  <div class="card">
-    <h2>Gasto por Categoría</h2>
-    <canvas id="pieChart"></canvas>
+  <!-- ======================================= -->
+  <!-- TAB GENERAL -->
+  <!-- ======================================= -->
+  <div id="tab-general" class="tab-content">
+
+    <div class="card">
+      <h2>Movimientos</h2>
+      <button onclick="abrirModalNuevo()" style="margin-bottom:10px;">Añadir gasto</button>
+      <table id="tabla"></table>
+    </div>
+
+  </div>
+
+  <!-- ======================================= -->
+  <!-- TAB GRÁFICOS -->
+  <!-- ======================================= -->
+  <div id="tab-graficos" class="tab-content" style="display:none;">
+
+    <div class="card">
+      <h2>Gasto por Categoría</h2>
+      <canvas id="pieChart"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>Gasto mensual</h2>
+      <canvas id="barMensual"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>Gasto diario</h2>
+      <canvas id="lineDiario"></canvas>
+    </div>
+
+  </div>
+
+  <!-- ======================================= -->
+  <!-- TAB RESUMEN -->
+  <!-- ======================================= -->
+  <div id="tab-resumen" class="tab-content" style="display:none;">
+
+    <div class="card">
+      <h2>Resumen del período</h2>
+      <p><strong>Total seleccionado:</strong> €<span id="res_total"></span></p>
+      <p><strong>Día con más gasto:</strong> <span id="res_max_dia"></span></p>
+      <p><strong>Media diaria:</strong> €<span id="res_media"></span></p>
+      <p><strong>Categoría principal:</strong> <span id="res_cat_top"></span></p>
+    </div>
+
   </div>
 
 </div>
 
+<!-- ======================================= -->
+<!-- MODAL FILTROS -->
+<!-- ======================================= -->
+<div class="modal-bg" id="modal-filtros">
+  <div class="modal">
+    <h3>Filtros</h3>
+
+    <label>Categoría:</label>
+    <select id="f_categoria">
+      <option value="">(Todas)</option>
+      <option value="Supermercado">Supermercado</option>
+      <option value="Restauración">Restauración</option>
+      <option value="Gasolina">Gasolina</option>
+      <option value="Otros">Otros</option>
+    </select>
+
+    <label>Comercio (contains):</label>
+    <input id="f_comercio" placeholder="Ej: merc, gas, bar...">
+
+    <label>Fecha:</label>
+    <select id="f_fecha_rango" onchange="toggleFechaPersonalizada()">
+      <option value="">(Sin filtro)</option>
+      <option value="mes_actual">Este mes</option>
+      <option value="mes_pasado">Mes pasado</option>
+      <option value="30_dias">Últimos 30 días</option>
+      <option value="personalizado">Personalizado</option>
+    </select>
+
+    <div id="fecha_personalizada" style="display:none;">
+      <input id="f_desde" type="date">
+      <input id="f_hasta" type="date">
+    </div>
+
+    <button onclick="aplicarFiltros()">Aplicar</button>
+    <button class="danger" onclick="cerrarModalFiltros()">Cerrar</button>
+  </div>
+</div>
+
+<!-- ====================== -->
 <!-- MODAL EDITAR -->
+<!-- ====================== -->
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
     <h3>Editar gasto</h3>
@@ -122,14 +235,16 @@ button.danger {
   </div>
 </div>
 
-<!-- MODAL NUEVO -->
+<!-- ====================== -->
+<!-- MODAL AÑADIR -->
+<!-- ====================== -->
 <div class="modal-bg" id="modal-nuevo-bg">
   <div class="modal">
     <h3>Añadir gasto</h3>
 
     <input id="nuevo_nombre" placeholder="Nombre comercio">
     <input id="nuevo_valor" type="number" step="0.01" placeholder="Importe total">
-    
+
     <select id="nuevo_categoria">
       <option value="">(Automática)</option>
       <option value="Supermercado">Supermercado</option>
@@ -142,158 +257,363 @@ button.danger {
     <button class="danger" onclick="cerrarModalNuevo()">Cancelar</button>
   </div>
 </div>
+<!-- Chart.js (por si no estaba cargado en la Parte 1) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+/* ======== ESTADO GLOBAL ======== */
 let gastosGlobal = [];
 let editId = null;
+
+/* Gráficos */
 let pieChartInstance = null;
+let barMensualInstance = null;
+let lineDiarioInstance = null;
 
+/* Filtros en memoria (no persistentes) */
+let currentFilters = {
+  categoria: "",
+  comercio: "",
+  desde: "",
+  hasta: "",
+  rango: ""   // "", "mes_actual", "mes_pasado", "30_dias", "personalizado"
+};
 
-async function cargarDatos() {
-    const r = await fetch("/dashboard-data");
-    const data = await r.json();
+/* ======== TABS ======== */
+function openTab(tab) {
+  const tabs = ["general", "graficos", "resumen"];
+  tabs.forEach(t => {
+    document.getElementById(`tab-${t}`).style.display = (t === tab) ? "block" : "none";
+  });
 
-    gastosGlobal = data.gastos;
-    document.getElementById("total_mes").innerText = data.total_mes.toFixed(2);
-
-    llenarTabla();
-    generarPie(data.categorias);
+  const btns = document.querySelectorAll(".tab-btn");
+  btns.forEach(b => b.classList.remove("active"));
+  const map = {general:0, graficos:1, resumen:2};
+  btns[map[tab]].classList.add("active");
 }
 
-function llenarTabla() {
-    const tabla = document.getElementById("tabla");
-    tabla.innerHTML = `
-      <tr>
-        <th>Comercio</th><th>Categoría</th>
-        <th>Total</th><th>Mi parte</th>
-        <th>Fecha</th><th>Acciones</th>
-      </tr>
-    `;
-
-    gastosGlobal.forEach(g => {
-        const miParte = (g.mi_parte != null ? g.mi_parte : g.valor);
-        tabla.innerHTML += `
-        <tr>
-          
-          <td>${g.nombre_comercio}</td>
-          <td>${g.categoria}</td>
-          <td>€${g.valor.toFixed(2)}</td>
-          <td><strong>€${miParte.toFixed(2)}</strong></td>
-          <td>${g.created_at}</td>
-          <td>
-            <button onclick="editar(${g.id})">Editar</button>
-            <button class="danger" onclick="eliminar(${g.id}, '${g.nombre_comercio}')">X</button>
-          </td>
-        </tr>`;
-    });
+/* ======== MODAL FILTROS ======== */
+function abrirModalFiltros() {
+  document.getElementById("modal-filtros").style.display = "block";
+  // precargar valores actuales
+  document.getElementById("f_categoria").value = currentFilters.categoria || "";
+  document.getElementById("f_comercio").value = currentFilters.comercio || "";
+  document.getElementById("f_fecha_rango").value = currentFilters.rango || "";
+  toggleFechaPersonalizada(); // muestra/oculta contenedor
+  document.getElementById("f_desde").value = currentFilters.desde || "";
+  document.getElementById("f_hasta").value = currentFilters.hasta || "";
+}
+function cerrarModalFiltros() {
+  document.getElementById("modal-filtros").style.display = "none";
 }
 
+function toggleFechaPersonalizada() {
+  const rango = document.getElementById("f_fecha_rango").value;
+  const box = document.getElementById("fecha_personalizada");
+  if (rango === "personalizado") {
+    box.style.display = "block";
+  } else {
+    box.style.display = "none";
+    // no limpiamos aquí para que se conserve si el usuario vuelve a elegir "personalizado"
+  }
+}
+
+/* Utilidades fecha en ISO (YYYY-MM-DD) */
+function toISODate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function monthStart(dateObj) {
+  return new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
+}
+function prevMonthRange() {
+  const now = new Date();
+  const firstPrev = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const lastPrev = new Date(now.getFullYear(), now.getMonth(), 0);
+  return {desde: toISODate(firstPrev), hasta: toISODate(lastPrev)};
+}
+
+async function aplicarFiltros() {
+  const categoria = document.getElementById("f_categoria").value || "";
+  const comercio = (document.getElementById("f_comercio").value || "").trim();
+  const rango = document.getElementById("f_fecha_rango").value || "";
+
+  let desde = "";
+  let hasta = "";
+
+  const hoy = new Date();
+
+  if (rango === "mes_actual") {
+    desde = toISODate(monthStart(hoy));
+    hasta = toISODate(hoy);
+  } else if (rango === "mes_pasado") {
+    const r = prevMonthRange();
+    desde = r.desde; hasta = r.hasta;
+  } else if (rango === "30_dias") {
+    const d = new Date(hoy.getTime() - 29*24*60*60*1000);
+    desde = toISODate(d);
+    hasta = toISODate(hoy);
+  } else if (rango === "personalizado") {
+    desde = document.getElementById("f_desde").value || "";
+    hasta = document.getElementById("f_hasta").value || "";
+  }
+
+  currentFilters = {categoria, comercio, desde, hasta, rango};
+  cerrarModalFiltros();
+  await cargarDatos();
+}
+
+/* ======== MODALES NUEVO / EDITAR ======== */
 function abrirModalNuevo() {
-    
-    document.getElementById("nuevo_nombre").value = "";
-    document.getElementById("nuevo_valor").value = "";
-    document.getElementById("nuevo_categoria").value = "";
-    document.getElementById("modal-nuevo-bg").style.display = "block";
-
+  document.getElementById("nuevo_nombre").value = "";
+  document.getElementById("nuevo_valor").value = "";
+  document.getElementById("nuevo_categoria").value = "";
+  document.getElementById("modal-nuevo-bg").style.display = "block";
 }
-
 function cerrarModalNuevo() {
-    document.getElementById("modal-nuevo-bg").style.display = "none";
+  document.getElementById("modal-nuevo-bg").style.display = "none";
 }
 
+function cerrarModal() {
+  document.getElementById("modal-bg").style.display = "none";
+}
+
+function editar(id) {
+  const g = gastosGlobal.find(x => x.id === id);
+  if (!g) return;
+  editId = id;
+  document.getElementById("edit_nombre").value = g.nombre_comercio;
+  document.getElementById("edit_valor").value = g.valor;
+  document.getElementById("edit_mi_parte").value = (g.mi_parte != null ? g.mi_parte : g.valor);
+  document.getElementById("edit_categoria").value = g.categoria || "Otros";
+  document.getElementById("modal-bg").style.display = "block";
+}
+
+/* ======== CRUD ======== */
 async function guardarNuevo() {
-    const nombre = document.getElementById("nuevo_nombre").value.trim();
-    const valor = parseFloat(document.getElementById("nuevo_valor").value);
-    const miParte = parseFloat(document.getElementById("nuevo_valor").value);
-    const categoria = document.getElementById("nuevo_categoria").value || null;
+  const nombre = document.getElementById("nuevo_nombre").value.trim();
+  const valor = parseFloat(document.getElementById("nuevo_valor").value);
+  const categoria = document.getElementById("nuevo_categoria").value || null;
 
-    if (!nombre || isNaN(valor)) {
-        alert("Introduce nombre y valor");
-        return;
-    }
-
-    const payload = {
-        nombre_comercio: nombre,
-        valor: valor,
-        mi_parte: isNaN(miParte) ? null : miParte,
-        categoria: categoria
-    };
-
-    await fetch("/gastos/add", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify(payload)
-    });
-
-    cerrarModalNuevo();
-    cargarDatos();
+  if (!nombre || isNaN(valor)) {
+    alert("Introduce nombre y valor");
+    return;
+  }
+  const payload = {
+    nombre_comercio: nombre,
+    valor: valor,
+    mi_parte: valor,     // 100% tuyo por defecto
+    categoria: categoria
+  };
+  await fetch("/gastos/add", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(payload)
+  });
+  cerrarModalNuevo();
+  await cargarDatos();
 }
+
+async function guardarEdicion() {
+  const nombre = document.getElementById("edit_nombre").value;
+  const valor = parseFloat(document.getElementById("edit_valor").value);
+  const miParte = parseFloat(document.getElementById("edit_mi_parte").value);
+  const categoria = document.getElementById("edit_categoria").value;
+
+  await fetch("/gastos/edit/" + editId, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      nombre_comercio: nombre,
+      valor: valor,
+      mi_parte: isNaN(miParte) ? null : miParte,
+      categoria: categoria
+    })
+  });
+  cerrarModal();
+  await cargarDatos();
+}
+
 
 async function eliminar(id, nombre_comercio) {
     if (!confirm("¿Eliminar gasto " + nombre_comercio + "?")) return;
 
     await fetch("/gastos/delete/" + id, { method:"POST" });
-    cargarDatos();
+    await cargarDatos();
 }
 
-function editar(id) {
-    const g = gastosGlobal.find(x => x.id === id);
-    editId = id;
-
-    document.getElementById("edit_nombre").value = g.nombre_comercio;
-    document.getElementById("edit_valor").value = g.valor;
-    document.getElementById("edit_mi_parte").value = g.mi_parte ?? g.valor;
-    document.getElementById("edit_categoria").value = g.categoria;
-
-    document.getElementById("modal-bg").style.display = "block";
+/* ======== CARGA DE DATOS (BACKEND CON FILTROS) ======== */
+function buildDashboardUrl() {
+  const params = new URLSearchParams();
+  if (currentFilters.categoria) params.set("categoria", currentFilters.categoria);
+  if (currentFilters.comercio) params.set("comercio", currentFilters.comercio);
+  if (currentFilters.desde) params.set("desde", currentFilters.desde);
+  if (currentFilters.hasta) params.set("hasta", currentFilters.hasta);
+  return "/dashboard-data" + (params.toString() ? ("?" + params.toString()) : "");
 }
 
-function cerrarModal() {
-    document.getElementById("modal-bg").style.display = "none";
+async function cargarDatos() {
+  const url = buildDashboardUrl();
+  const r = await fetch(url);
+  const data = await r.json();
+
+  gastosGlobal = data.gastos || [];
+  document.getElementById("total_mes").innerText = (data.total_mes || 0).toFixed(2);
+
+  llenarTabla();
+
+  // Gráficos
+  generarPie(data.categorias || {});
+  generarBarMensual(data.mensual || {});
+  generarLineaDiario(data.diario || {});
+
+  // KPIs resumen
+  actualizarResumen(data);
 }
 
-async function guardarEdicion() {
-    const nombre = document.getElementById("edit_nombre").value;
-    const valor = parseFloat(document.getElementById("edit_valor").value);
-    const miParte = parseFloat(document.getElementById("edit_mi_parte").value);
-    const categoria = document.getElementById("edit_categoria").value;
-
-    await fetch("/gastos/edit/" + editId, {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({
-            nombre_comercio: nombre,
-            valor: valor,
-            mi_parte: isNaN(miParte) ? null : miParte,
-            categoria: categoria
-        })
-    });
-
-    cerrarModal();
-    cargarDatos();
+/* ======== TABLA ======== */
+function llenarTabla() {
+  const tabla = document.getElementById("tabla");
+  tabla.innerHTML = `
+    <tr>
+      <th>Comercio</th><th>Categoría</th>
+      <th>Total</th><th>Mi parte</th>
+      <th>Fecha</th><th>Acciones</th>
+    </tr>
+  `;
+  gastosGlobal.forEach(g => {
+    const miParte = (g.mi_parte != null ? g.mi_parte : g.valor);
+    tabla.innerHTML += `
+      <tr>
+       
+        <td>${g.nombre_comercio}</td>
+        <td>${g.categoria}</td>
+        <td>€${Number(g.valor || 0).toFixed(2)}</td>
+        <td><strong>€${Number(miParte || 0).toFixed(2)}</strong></td>
+        <td>${g.created_at}</td>
+        <td>
+          <button onclick="editar(${g.id})">Editar</button>
+          <button class="danger" onclick="eliminar(${g.id}, '${g.nombre_comercio}')">X</button>
+        </td>
+      </tr>
+    `;
+  });
 }
 
+/* ======== GRÁFICOS ======== */
 function generarPie(categorias) {
-    const ctx = document.getElementById("pieChart");
+  const ctx = document.getElementById("pieChart");
+  if (pieChartInstance) pieChartInstance.destroy();
 
-    // Si ya hay un gráfico creado, destruirlo primero
-    if (pieChartInstance !== null) {
-        pieChartInstance.destroy();
+  const labels = Object.keys(categorias);
+  const values = Object.values(categorias);
+
+  pieChartInstance = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor:["#0066cc","#00aa00","#cc6600","#999999","#9933cc","#ff9900"]
+      }]
     }
-
-    pieChartInstance = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: Object.keys(categorias),
-            datasets: [{
-                data: Object.values(categorias),
-                backgroundColor:["#0066cc","#00aa00","#cc6600","#999999"]
-            }]
-        }
-    });
+  });
 }
 
+function generarBarMensual(mensual) {
+  const ctx = document.getElementById("barMensual");
+  if (barMensualInstance) barMensualInstance.destroy();
+
+  const labels = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const values = [];
+  for (let m=1; m<=12; m++) values.push(Number(mensual[m] || 0));
+
+  barMensualInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: "Gasto mensual (mi parte)",
+        data: values,
+        backgroundColor: "#0066cc"
+      }]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+function generarLineaDiario(diario) {
+  const ctx = document.getElementById("lineDiario");
+  if (lineDiarioInstance) lineDiarioInstance.destroy();
+
+  const days = Object.keys(diario).map(d => Number(d)).sort((a,b)=>a-b);
+  const values = days.map(d => Number(diario[d] || 0));
+
+  lineDiarioInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: days,
+      datasets: [{
+        label: "Gasto diario (mi parte)",
+        data: values,
+        tension: 0.25,
+        borderColor: "#00aa00",
+        backgroundColor: "rgba(0,170,0,0.2)",
+        pointRadius: 3,
+        pointBackgroundColor: "#00aa00"
+      }]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+/* ======== RESUMEN (KPIs) ======== */
+function actualizarResumen(data) {
+  // Total seleccionado: suma de mi_parte de todos los gastos devueltos (ya filtrados)
+  const totalSelected = (data.gastos || []).reduce((acc, g) => {
+    const v = (g.mi_parte != null ? g.mi_parte : g.valor) || 0;
+    return acc + Number(v);
+  }, 0);
+  document.getElementById("res_total").innerText = totalSelected.toFixed(2);
+
+  // Día con más gasto (según 'diario')
+  let maxDia = "-", maxVal = 0;
+  const diario = data.diario || {};
+  Object.keys(diario).forEach(d => {
+    const v = Number(diario[d] || 0);
+    if (v > maxVal) { maxVal = v; maxDia = d; }
+  });
+  document.getElementById("res_max_dia").innerText = (maxDia === "-" ? "-" : `${maxDia} (€${maxVal.toFixed(2)})`);
+
+  // Media diaria: total / nº de días con gasto (clásico)
+  const diasConGasto = Object.keys(diario).length || 1;
+  const media = totalSelected / diasConGasto;
+  document.getElementById("res_media").innerText = media.toFixed(2);
+
+  // Categoría principal: mayor valor en 'categorias'
+  const catMap = data.categorias || {};
+  let catTop = "-", catTopVal = 0;
+  Object.keys(catMap).forEach(c => {
+    const v = Number(catMap[c] || 0);
+    if (v > catTopVal) { catTopVal = v; catTop = c; }
+  });
+  document.getElementById("res_cat_top").innerText = (catTop === "-" ? "-" : `${catTop} (€${catTopVal.toFixed(2)})`);
+}
+
+/* ======== INICIO ======== */
+openTab('general');
 cargarDatos();
+
 </script>
 
 </body>

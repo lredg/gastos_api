@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Panel de Gastos</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+header {
+    background: #0066cc;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+.container {
+    padding: 20px;
+}
+.card {
+    background: white;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+th, td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+th {
+    background: #fafafa;
+    text-align: left;
+}
+tr:hover { background: #f1f1f1; cursor: pointer; }
+
+/* MODAL */
+.modal-bg {
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.5);
+}
+.modal {
+    background:white;
+    width:90%;
+    max-width:400px;
+    margin:100px auto;
+    padding:20px;
+    border-radius:8px;
+}
+.modal input, .modal select {
+    width:100%;
+    padding:8px;
+    margin-bottom:10px;
+}
+button {
+    padding:10px 15px;
+    border:none;
+    background:#0066cc;
+    color:white;
+    border-radius:5px;
+    cursor:pointer;
+}
+button.danger {
+    background:#cc0000;
+}
+</style>
+
+</head>
+<body>
+
+<header>
+  <h1>Mis Gastos</h1>
+  <p>Total mes: €<span id="total_mes">0.00</span></p>
+</header>
+
+<div class="container">
+
+  <!-- LISTA DE GASTOS -->
+  <div class="card">
+    <h2>Movimientos</h2>
+    <button onclick="abrirModalNuevo()" style="margin-bottom:10px;">Añadir gasto</button>
+    <table id="tabla"></table>
+  </div>
+
+  <!-- GRAFICO CATEGORÍAS -->
+  <div class="card">
+    <h2>Gasto por Categoría</h2>
+    <canvas id="pieChart"></canvas>
+  </div>
+
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <h3>Editar gasto</h3>
+
+    <input id="edit_nombre" placeholder="Nombre comercio">
+    <input id="edit_valor" type="number" step="0.01" placeholder="Importe total">
+    <input id="edit_mi_parte" type="number" step="0.01" placeholder="Mi parte">
+
+    <select id="edit_categoria">
+      <option value="Supermercado">Supermercado</option>
+      <option value="Restauración">Restauración</option>
+      <option value="Gasolina">Gasolina</option>
+      <option value="Otros">Otros</option>
+    </select>
+
+    <button onclick="guardarEdicion()">Guardar</button>
+    <button class="danger" onclick="cerrarModal()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL NUEVO -->
+<div class="modal-bg" id="modal-nuevo-bg">
+  <div class="modal">
+    <h3>Añadir gasto</h3>
+
+    <input id="nuevo_nombre" placeholder="Nombre comercio">
+    <input id="nuevo_valor" type="number" step="0.01" placeholder="Importe total">
+    
+    <select id="nuevo_categoria">
+      <option value="">(Automática)</option>
+      <option value="Supermercado">Supermercado</option>
+      <option value="Restauración">Restauración</option>
+      <option value="Gasolina">Gasolina</option>
+      <option value="Otros">Otros</option>
+    </select>
+
+    <button onclick="guardarNuevo()">Guardar</button>
+    <button class="danger" onclick="cerrarModalNuevo()">Cancelar</button>
+  </div>
+</div>
+
+<script>
+let gastosGlobal = [];
+let editId = null;
+let pieChartInstance = null;
+
+
+async function cargarDatos() {
+    const r = await fetch("/dashboard-data");
+    const data = await r.json();
+
+    gastosGlobal = data.gastos;
+    document.getElementById("total_mes").innerText = data.total_mes.toFixed(2);
+
+    llenarTabla();
+    generarPie(data.categorias);
+}
+
+function llenarTabla() {
+    const tabla = document.getElementById("tabla");
+    tabla.innerHTML = `
+      <tr>
+        <th>Comercio</th><th>Categoría</th>
+        <th>Total</th><th>Mi parte</th>
+        <th>Fecha</th><th>Acciones</th>
+      </tr>
+    `;
+
+    gastosGlobal.forEach(g => {
+        const miParte = (g.mi_parte != null ? g.mi_parte : g.valor);
+        tabla.innerHTML += `
+        <tr>
+          
+          <td>${g.nombre_comercio}</td>
+          <td>${g.categoria}</td>
+          <td>€${g.valor.toFixed(2)}</td>
+          <td><strong>€${miParte.toFixed(2)}</strong></td>
+          <td>${g.created_at}</td>
+          <td>
+            <button onclick="editar(${g.id})">Editar</button>
+            <button class="danger" onclick="eliminar(${g.id}, '${g.nombre_comercio}')">X</button>
+          </td>
+        </tr>`;
+    });
+}
+
+function abrirModalNuevo() {
+    
+    document.getElementById("nuevo_nombre").value = "";
+    document.getElementById("nuevo_valor").value = "";
+    document.getElementById("nuevo_categoria").value = "";
+    document.getElementById("modal-nuevo-bg").style.display = "block";
+
+}
+
+function cerrarModalNuevo() {
+    document.getElementById("modal-nuevo-bg").style.display = "none";
+}
+
+async function guardarNuevo() {
+    const nombre = document.getElementById("nuevo_nombre").value.trim();
+    const valor = parseFloat(document.getElementById("nuevo_valor").value);
+    const miParte = parseFloat(document.getElementById("nuevo_valor").value);
+    const categoria = document.getElementById("nuevo_categoria").value || null;
+
+    if (!nombre || isNaN(valor)) {
+        alert("Introduce nombre y valor");
+        return;
+    }
+
+    const payload = {
+        nombre_comercio: nombre,
+        valor: valor,
+        mi_parte: isNaN(miParte) ? null : miParte,
+        categoria: categoria
+    };
+
+    await fetch("/gastos/add", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+    });
+
+    cerrarModalNuevo();
+    cargarDatos();
+}
+
+async function eliminar(id, nombre_comercio) {
+    if (!confirm("¿Eliminar gasto " + nombre_comercio + "?")) return;
+
+    await fetch("/gastos/delete/" + id, { method:"POST" });
+    cargarDatos();
+}
+
+function editar(id) {
+    const g = gastosGlobal.find(x => x.id === id);
+    editId = id;
+
+    document.getElementById("edit_nombre").value = g.nombre_comercio;
+    document.getElementById("edit_valor").value = g.valor;
+    document.getElementById("edit_mi_parte").value = g.mi_parte ?? g.valor;
+    document.getElementById("edit_categoria").value = g.categoria;
+
+    document.getElementById("modal-bg").style.display = "block";
+}
+
+function cerrarModal() {
+    document.getElementById("modal-bg").style.display = "none";
+}
+
+async function guardarEdicion() {
+    const nombre = document.getElementById("edit_nombre").value;
+    const valor = parseFloat(document.getElementById("edit_valor").value);
+    const miParte = parseFloat(document.getElementById("edit_mi_parte").value);
+    const categoria = document.getElementById("edit_categoria").value;
+
+    await fetch("/gastos/edit/" + editId, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+            nombre_comercio: nombre,
+            valor: valor,
+            mi_parte: isNaN(miParte) ? null : miParte,
+            categoria: categoria
+        })
+    });
+
+    cerrarModal();
+    cargarDatos();
+}
+
+function generarPie(categorias) {
+    const ctx = document.getElementById("pieChart");
+
+    // Si ya hay un gráfico creado, destruirlo primero
+    if (pieChartInstance !== null) {
+        pieChartInstance.destroy();
+    }
+
+    pieChartInstance = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(categorias),
+            datasets: [{
+                data: Object.values(categorias),
+                backgroundColor:["#0066cc","#00aa00","#cc6600","#999999"]
+            }]
+        }
+    });
+}
+
+cargarDatos();
+</script>
+
+</body>
+</html>
