@@ -64,6 +64,20 @@ class GastoIn(BaseModel):
     reparto: Optional[int] = Field(None, description="1, 2, 3… (None/0 = todo para mí)")
 
 
+class GastoAdd(BaseModel):
+    nombre_comercio: str
+    valor: float
+    mi_parte: Optional[float] = None
+    categoria: Optional[str] = None
+
+
+class GastoEdit(BaseModel):
+    nombre_comercio: str
+    valor: float
+    mi_parte: Optional[float] = None
+    categoria: Optional[str] = None
+
+
 # ================================
 #  LISTAR GASTOS
 # ================================
@@ -95,7 +109,7 @@ async def health_head():
 
 
 # ================================
-#  WEBHOOK DEL ATAJO
+#  WEBHOOK DEL ATAJO (NO CAMBIA)
 # ================================
 @app.post("/webhook/gasto")
 async def webhook_gasto(
@@ -120,8 +134,6 @@ async def webhook_gasto(
         raise HTTPException(status_code=422, detail="nombre_comercio vacío")
 
     payload = {"nombre_comercio": nombre, "valor": amount, "mi_parte": mi_parte}
-    if gasto.external_id:
-        payload["external_id"] = gasto.external_id.strip()
 
     url = f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLE}"
     headers = {
@@ -134,11 +146,41 @@ async def webhook_gasto(
     async with httpx.AsyncClient(timeout=10) as client:
         r = await client.post(url, json=payload, headers=headers)
 
-    if r.status_code >= 400:
-        raise HTTPException(status_code=r.status_code, detail=r.text)
-
     data = r.json()
     return {"ok": True, "inserted": data[0]}
+
+
+# ================================
+#  AÑADIR GASTO MANUAL
+# ================================
+@app.post("/gastos/add")
+async def add_gasto(gasto: GastoAdd):
+    nombre = gasto.nombre_comercio.strip()
+    if not nombre:
+        raise HTTPException(status_code=422, detail="nombre_comercio vacío")
+
+    amount = float(gasto.valor)
+    mi_parte = float(gasto.mi_parte) if gasto.mi_parte is not None else amount
+
+    payload = {
+        "nombre_comercio": nombre,
+        "valor": amount,
+        "mi_parte": mi_parte,
+        "categoria": gasto.categoria
+    }
+
+    url = f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLE}"
+    headers = {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    }
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.post(url, json=payload, headers=headers)
+
+    return {"ok": True, "inserted": r.json()[0]}
 
 
 # ================================
@@ -166,7 +208,7 @@ async def panel(request: Request):
 
 
 # ================================
-#  DASHBOARD DATA (GRÁFICOS)
+#  DASHBOARD DATA
 # ================================
 @app.get("/dashboard-data")
 async def dashboard_data():
@@ -179,11 +221,11 @@ async def dashboard_data():
 
     gastos = r.json()
 
-    # Categoría automática
+    # Respetar categoría guardada en BD, autocompletar solo si no existe
     for g in gastos:
-        g["categoria"] = categorizar(g["nombre_comercio"])
+        if not g.get("categoria"):
+            g["categoria"] = categorizar(g["nombre_comercio"])
 
-    # Fecha actual
     now = datetime.utcnow()
     this_month = now.month
     this_year = now.year
@@ -191,16 +233,14 @@ async def dashboard_data():
     def my_amount(g):
         return float(g.get("mi_parte") or g.get("valor") or 0)
 
-    # Total del mes (tu parte)
     total_mes = 0.0
     for g in gastos:
         if not g.get("created_at"):
             continue
-        dt = parse_date(g["created_at"])  # <-- Robustísimo
+        dt = parse_date(g["created_at"])
         if dt.month == this_month and dt.year == this_year:
             total_mes += my_amount(g)
 
-    # Totales por categoría
     cat_totals = {}
     for g in gastos:
         cat = g["categoria"]
@@ -222,7 +262,7 @@ async def borrar_gasto(gasto_id: int):
     headers = {"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "Prefer": "return=minimal"}
 
     async with httpx.AsyncClient() as client:
-        r = await client.delete(url, headers=headers)
+        await client.delete(url, headers=headers)
 
     return {"ok": True}
 
@@ -230,17 +270,12 @@ async def borrar_gasto(gasto_id: int):
 # ================================
 #  EDITAR GASTO
 # ================================
-class GastoEdit(BaseModel):
-    nombre_comercio: str
-    valor: float
-    mi_parte: Optional[float] = None
-
 @app.post("/gastos/edit/{gasto_id}")
 async def editar_gasto(gasto_id: int, gasto: GastoEdit):
     payload = {
         "nombre_comercio": gasto.nombre_comercio.strip(),
         "valor": float(gasto.valor),
-        "mi_parte": float(gasto.mi_parte) if gasto.mi_parte is not None else None
+        "categoria": gasto.categoria
     }
 
     url = f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLE}?id=eq.{gasto_id}"
@@ -255,5 +290,5 @@ async def editar_gasto(gasto_id: int, gasto: GastoEdit):
         r = await client.patch(url, json=payload, headers=headers)
 
     updated = r.json()[0]
-    updated["categoria"] = categorizar(updated["nombre_comercio"])
+    updated["categoria"] = updated.get("categoria") or categorizar(updated["nombre_comercio"])
     return updated
