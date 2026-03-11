@@ -188,22 +188,21 @@ async def dashboard_data(
 
     params = {"select": "*", "order": "created_at.desc"}
 
-    filters = []
-
+    # --- FILTROS CORRECTOS para Supabase/PostgREST ---
     if categoria:
-        filters.append(f"categoria=eq.{categoria}")
+        params["categoria"] = f"eq.{categoria}"
 
     if comercio:
-        filters.append(f"nombre_comercio=ilike.*{comercio}*")
+        params["nombre_comercio"] = f"ilike.*{comercio}*"
 
+    # created_at puede repetirse en params sin problema
     if desde:
-        filters.append(f"created_at=gte.{desde}")
+        params.setdefault("created_at", [])
+        params["created_at"].append(f"gte.{desde}")
 
     if hasta:
-        filters.append(f"created_at=lte.{hasta}")
-
-    if filters:
-        params["and"] = ",".join(filters)
+        params.setdefault("created_at", [])
+        params["created_at"].append(f"lte.{hasta}")
 
     async with httpx.AsyncClient() as client:
         r = await client.get(url, headers=headers, params=params)
