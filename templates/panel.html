@@ -6,30 +6,39 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-/* ---- ESTILO GENERAL ---- */
+/* ============================= */
+/* ESTILO GENERAL */
+/* ============================= */
 body {
     font-family: Arial, sans-serif;
     background: #f4f4f4;
     margin: 0;
     padding: 0;
 }
+
 header {
-    background: #0066cc;
+    background: linear-gradient(90deg, #0066cc, #004a99);
     color: white;
-    padding: 20px;
+    padding: 12px 20px;
     text-align: center;
 }
-/* ---- CONTENEDOR ---- */
+
+/* ============================= */
+/* CONTENEDOR */
+/* ============================= */
 .container {
     padding: 20px;
 }
 
-/* ---- TABS ---- */
+/* ============================= */
+/* TABS */
+/* ============================= */
 .tabs {
     display: flex;
     gap: 10px;
     margin-bottom: 15px;
 }
+
 .tab-btn {
     padding: 10px 20px;
     border-radius: 6px;
@@ -39,12 +48,15 @@ header {
     color: #333;
     font-weight: bold;
 }
+
 .tab-btn.active {
     background: #0066cc;
     color: white;
 }
 
-/* ---- TARJETAS ---- */
+/* ============================= */
+/* TARJETAS */
+/* ============================= */
 .card {
     background: white;
     padding: 15px;
@@ -52,23 +64,60 @@ header {
     border-radius: 8px;
 }
 
-/* ---- TABLAS ---- */
+/* ============================= */
+/* TABLAS */
+/* ============================= */
+
+.table-wrap {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 5px; /* para que el scroll no tape columnas */
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
     background: white;
+    table-layout: fixed;
 }
+
 th, td {
     padding: 10px;
     border-bottom: 1px solid #eee;
+    vertical-align: middle;
+    text-align: center;
 }
-th {
-    background: #fafafa;
-    text-align: left;
-}
-tr:hover { background: #f1f1f1; cursor: pointer; }
 
-/* ---- MODALES ---- */
+tr:hover { background: #f1f1f1; }
+
+/* ============================= */
+/* BOTONES */
+/* ============================= */
+button {
+    padding: 10px 15px;
+    border: none;
+    background: #0066cc;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+button:hover {
+    background: #0053a3;
+}
+
+button.danger {
+    background: #c62828;
+}
+
+button.danger:hover {
+    background: #9a2121;
+}
+
+/* ============================= */
+/* MODALES */
+/* ============================= */
 .modal-bg {
     display:none;
     position:fixed;
@@ -76,6 +125,7 @@ tr:hover { background: #f1f1f1; cursor: pointer; }
     width:100%; height:100%;
     background:rgba(0,0,0,0.5);
 }
+
 .modal {
     background:white;
     width:90%;
@@ -84,60 +134,76 @@ tr:hover { background: #f1f1f1; cursor: pointer; }
     padding:20px;
     border-radius:8px;
 }
+
 .modal input, .modal select {
     width:100%;
     padding:8px;
     margin-bottom:10px;
 }
-button {
-    padding:10px 15px;
-    border:none;
-    background:#0066cc;
-    color:white;
-    border-radius:5px;
-    cursor:pointer;
+
+/* ============================= */
+/* GRÁFICOS */
+/* ============================= */
+
+#pieChart {
+    max-width: 500px;
+    max-height: 500px;
+    margin: 0 auto;
 }
-button.danger {
-    background:#cc0000;
+
+
+#barMensual, #lineDiario {
+    width: 100%;
+    max-height: 180px;    /* ↓ antes 260 */
+    height: 180px !important;
 }
+
 
 </style>
 </head>
+
 <body>
 
 <header>
   <h1>Mis Gastos</h1>
-  <p>Total mes: €<span id="total_mes">0.00</span></p>
+  <p style="font-size:1.8rem; font-weight:bold; margin:10px 0;">
+    Total mes: <span id="total_mes" style="font-size:2.2rem;">0.00</span> €
+  </p>
 </header>
 
 <div class="container">
 
-  <!-- ======================================= -->
+  <!-- ============================ -->
   <!-- TABS -->
-  <!-- ======================================= -->
+  <!-- ============================ -->
   <div class="tabs">
     <button class="tab-btn active" onclick="openTab('general')">GENERAL</button>
     <button class="tab-btn" onclick="openTab('graficos')">GRÁFICOS</button>
     <button class="tab-btn" onclick="openTab('resumen')">RESUMEN</button>
+
     <button style="margin-left:auto;" onclick="abrirModalFiltros()">Filtros 🔍</button>
+    <button class="danger" onclick="resetFiltros()">Reset filtros ⛔</button>
   </div>
 
-  <!-- ======================================= -->
+  <!-- ============================ -->
   <!-- TAB GENERAL -->
-  <!-- ======================================= -->
+  <!-- ============================ -->
   <div id="tab-general" class="tab-content">
 
     <div class="card">
       <h2>Movimientos</h2>
       <button onclick="abrirModalNuevo()" style="margin-bottom:10px;">Añadir gasto</button>
-      <table id="tabla"></table>
+
+      <div class="table-wrap">
+        <table id="tabla"></table>
+      </div>
     </div>
 
   </div>
 
-  <!-- ======================================= -->
+  <!-- ============================ -->
   <!-- TAB GRÁFICOS -->
-  <!-- ======================================= -->
+  <!-- ============================ -->
   <div id="tab-graficos" class="tab-content" style="display:none;">
 
     <div class="card">
@@ -157,9 +223,9 @@ button.danger {
 
   </div>
 
-  <!-- ======================================= -->
+  <!-- ============================ -->
   <!-- TAB RESUMEN -->
-  <!-- ======================================= -->
+  <!-- ============================ -->
   <div id="tab-resumen" class="tab-content" style="display:none;">
 
     <div class="card">
@@ -174,9 +240,9 @@ button.danger {
 
 </div>
 
-<!-- ======================================= -->
+<!-- ============================ -->
 <!-- MODAL FILTROS -->
-<!-- ======================================= -->
+<!-- ============================ -->
 <div class="modal-bg" id="modal-filtros">
   <div class="modal">
     <h3>Filtros</h3>
@@ -190,7 +256,7 @@ button.danger {
       <option value="Otros">Otros</option>
     </select>
 
-    <label>Comercio (contains):</label>
+    <label>Comercio contiene:</label>
     <input id="f_comercio" placeholder="Ej: merc, gas, bar...">
 
     <label>Fecha:</label>
@@ -212,9 +278,9 @@ button.danger {
   </div>
 </div>
 
-<!-- ====================== -->
+<!-- ============================ -->
 <!-- MODAL EDITAR -->
-<!-- ====================== -->
+<!-- ============================ -->
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
     <h3>Editar gasto</h3>
@@ -235,9 +301,9 @@ button.danger {
   </div>
 </div>
 
-<!-- ====================== -->
-<!-- MODAL AÑADIR -->
-<!-- ====================== -->
+<!-- ============================ -->
+<!-- MODAL NUEVO -->
+<!-- ============================ -->
 <div class="modal-bg" id="modal-nuevo-bg">
   <div class="modal">
     <h3>Añadir gasto</h3>
@@ -257,92 +323,93 @@ button.danger {
     <button class="danger" onclick="cerrarModalNuevo()">Cancelar</button>
   </div>
 </div>
-<!-- Chart.js (por si no estaba cargado en la Parte 1) -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<!-- ============================ -->
+<!-- SCRIPT PRINCIPAL -->
+<!-- ============================ -->
 <script>
 /* ======== ESTADO GLOBAL ======== */
 let gastosGlobal = [];
 let editId = null;
 
-/* Gráficos */
 let pieChartInstance = null;
 let barMensualInstance = null;
 let lineDiarioInstance = null;
 
-/* Filtros en memoria (no persistentes) */
+let lastData = null;
+
 let currentFilters = {
   categoria: "",
   comercio: "",
   desde: "",
   hasta: "",
-  rango: ""   // "", "mes_actual", "mes_pasado", "30_dias", "personalizado"
+  rango: ""
 };
 
 /* ======== TABS ======== */
 function openTab(tab) {
   const tabs = ["general", "graficos", "resumen"];
   tabs.forEach(t => {
-    document.getElementById(`tab-${t}`).style.display = (t === tab) ? "block" : "none";
+    document.getElementById(`tab-${t}`).style.display =
+      t === tab ? "block" : "none";
   });
 
   const btns = document.querySelectorAll(".tab-btn");
   btns.forEach(b => b.classList.remove("active"));
-  const map = {general:0, graficos:1, resumen:2};
-  btns[map[tab]].classList.add("active");
+
+  const idx = { general: 0, graficos: 1, resumen: 2 }[tab];
+  btns[idx].classList.add("active");
+
+  if (tab === "graficos" && lastData) {
+    generarPie(lastData.categorias || {});
+    generarBarMensual(lastData.mensual || {});
+    generarLineaDiario(lastData.diario || {});
+  }
 }
 
-/* ======== MODAL FILTROS ======== */
+/* ======== MODALES FILTROS ======== */
 function abrirModalFiltros() {
   document.getElementById("modal-filtros").style.display = "block";
-  // precargar valores actuales
-  document.getElementById("f_categoria").value = currentFilters.categoria || "";
-  document.getElementById("f_comercio").value = currentFilters.comercio || "";
-  document.getElementById("f_fecha_rango").value = currentFilters.rango || "";
-  toggleFechaPersonalizada(); // muestra/oculta contenedor
-  document.getElementById("f_desde").value = currentFilters.desde || "";
-  document.getElementById("f_hasta").value = currentFilters.hasta || "";
+  document.getElementById("f_categoria").value = currentFilters.categoria;
+  document.getElementById("f_comercio").value = currentFilters.comercio;
+  document.getElementById("f_fecha_rango").value = currentFilters.rango;
+  document.getElementById("f_desde").value = currentFilters.desde;
+  document.getElementById("f_hasta").value = currentFilters.hasta;
+  toggleFechaPersonalizada();
 }
+
 function cerrarModalFiltros() {
   document.getElementById("modal-filtros").style.display = "none";
 }
 
 function toggleFechaPersonalizada() {
   const rango = document.getElementById("f_fecha_rango").value;
-  const box = document.getElementById("fecha_personalizada");
-  if (rango === "personalizado") {
-    box.style.display = "block";
-  } else {
-    box.style.display = "none";
-    // no limpiamos aquí para que se conserve si el usuario vuelve a elegir "personalizado"
-  }
+  document.getElementById("fecha_personalizada").style.display =
+    rango === "personalizado" ? "block" : "none";
 }
 
-/* Utilidades fecha en ISO (YYYY-MM-DD) */
 function toISODate(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
-function monthStart(dateObj) {
-  return new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
+
+function monthStart(d) {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
 }
+
 function prevMonthRange() {
   const now = new Date();
-  const firstPrev = new Date(now.getFullYear(), now.getMonth()-1, 1);
-  const lastPrev = new Date(now.getFullYear(), now.getMonth(), 0);
-  return {desde: toISODate(firstPrev), hasta: toISODate(lastPrev)};
+  const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const last = new Date(now.getFullYear(), now.getMonth(), 0);
+  return { desde: toISODate(first), hasta: toISODate(last) };
 }
 
 async function aplicarFiltros() {
-  const categoria = document.getElementById("f_categoria").value || "";
-  const comercio = (document.getElementById("f_comercio").value || "").trim();
-  const rango = document.getElementById("f_fecha_rango").value || "";
+  const categoria = document.getElementById("f_categoria").value;
+  const comercio = document.getElementById("f_comercio").value.trim();
+  const rango = document.getElementById("f_fecha_rango").value;
 
   let desde = "";
   let hasta = "";
-
   const hoy = new Date();
 
   if (rango === "mes_actual") {
@@ -350,28 +417,37 @@ async function aplicarFiltros() {
     hasta = toISODate(hoy);
   } else if (rango === "mes_pasado") {
     const r = prevMonthRange();
-    desde = r.desde; hasta = r.hasta;
+    desde = r.desde;
+    hasta = r.hasta;
   } else if (rango === "30_dias") {
-    const d = new Date(hoy.getTime() - 29*24*60*60*1000);
+    const d = new Date(hoy.getTime() - 29 * 24 * 3600 * 1000);
     desde = toISODate(d);
     hasta = toISODate(hoy);
   } else if (rango === "personalizado") {
-    desde = document.getElementById("f_desde").value || "";
-    hasta = document.getElementById("f_hasta").value || "";
+    desde = document.getElementById("f_desde").value;
+    hasta = document.getElementById("f_hasta").value;
   }
 
-  currentFilters = {categoria, comercio, desde, hasta, rango};
+  currentFilters = { categoria, comercio, desde, hasta, rango };
   cerrarModalFiltros();
   await cargarDatos();
 }
 
-/* ======== MODALES NUEVO / EDITAR ======== */
+/* RESET FILTROS */
+function resetFiltros() {
+  currentFilters = { categoria: "", comercio: "", desde: "", hasta: "", rango: "" };
+  cargarDatos();
+}
+
+/* ======== MODALES NUEVO/EDITAR ======== */
+
 function abrirModalNuevo() {
   document.getElementById("nuevo_nombre").value = "";
   document.getElementById("nuevo_valor").value = "";
   document.getElementById("nuevo_categoria").value = "";
   document.getElementById("modal-nuevo-bg").style.display = "block";
 }
+
 function cerrarModalNuevo() {
   document.getElementById("modal-nuevo-bg").style.display = "none";
 }
@@ -383,15 +459,16 @@ function cerrarModal() {
 function editar(id) {
   const g = gastosGlobal.find(x => x.id === id);
   if (!g) return;
+
   editId = id;
   document.getElementById("edit_nombre").value = g.nombre_comercio;
   document.getElementById("edit_valor").value = g.valor;
-  document.getElementById("edit_mi_parte").value = (g.mi_parte != null ? g.mi_parte : g.valor);
-  document.getElementById("edit_categoria").value = g.categoria || "Otros";
+  document.getElementById("edit_mi_parte").value = g.mi_parte ?? g.valor;
+  document.getElementById("edit_categoria").value = g.categoria;
+
   document.getElementById("modal-bg").style.display = "block";
 }
 
-/* ======== CRUD ======== */
 async function guardarNuevo() {
   const nombre = document.getElementById("nuevo_nombre").value.trim();
   const valor = parseFloat(document.getElementById("nuevo_valor").value);
@@ -401,17 +478,18 @@ async function guardarNuevo() {
     alert("Introduce nombre y valor");
     return;
   }
-  const payload = {
-    nombre_comercio: nombre,
-    valor: valor,
-    mi_parte: valor,     // 100% tuyo por defecto
-    categoria: categoria
-  };
+
   await fetch("/gastos/add", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify(payload)
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      nombre_comercio: nombre,
+      valor,
+      mi_parte: valor,
+      categoria
+    })
   });
+
   cerrarModalNuevo();
   await cargarDatos();
 }
@@ -419,79 +497,85 @@ async function guardarNuevo() {
 async function guardarEdicion() {
   const nombre = document.getElementById("edit_nombre").value;
   const valor = parseFloat(document.getElementById("edit_valor").value);
-  const miParte = parseFloat(document.getElementById("edit_mi_parte").value);
+  const mi_parte = document.getElementById("edit_mi_parte").value;
   const categoria = document.getElementById("edit_categoria").value;
 
   await fetch("/gastos/edit/" + editId, {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       nombre_comercio: nombre,
-      valor: valor,
-      mi_parte: isNaN(miParte) ? null : miParte,
-      categoria: categoria
+      valor,
+      mi_parte: mi_parte ? parseFloat(mi_parte) : null,
+      categoria
     })
   });
+
   cerrarModal();
   await cargarDatos();
 }
 
-
-async function eliminar(id, nombre_comercio) {
-    if (!confirm("¿Eliminar gasto " + nombre_comercio + "?")) return;
-
-    await fetch("/gastos/delete/" + id, { method:"POST" });
-    await cargarDatos();
+async function eliminar(id, nombre) {
+  if (!confirm("¿Eliminar gasto " + nombre + "?")) return;
+  await fetch("/gastos/delete/" + id, { method: "POST" });
+  await cargarDatos();
 }
 
-/* ======== CARGA DE DATOS (BACKEND CON FILTROS) ======== */
+/* ======== CARGA DE DATOS ======== */
+
 function buildDashboardUrl() {
   const params = new URLSearchParams();
+
   if (currentFilters.categoria) params.set("categoria", currentFilters.categoria);
   if (currentFilters.comercio) params.set("comercio", currentFilters.comercio);
   if (currentFilters.desde) params.set("desde", currentFilters.desde);
   if (currentFilters.hasta) params.set("hasta", currentFilters.hasta);
-  return "/dashboard-data" + (params.toString() ? ("?" + params.toString()) : "");
+
+  const p = params.toString();
+  return "/dashboard-data" + (p ? "?" + p : "");
 }
 
 async function cargarDatos() {
   const url = buildDashboardUrl();
   const r = await fetch(url);
   const data = await r.json();
+  lastData = data;
 
-  gastosGlobal = data.gastos || [];
-  document.getElementById("total_mes").innerText = (data.total_mes || 0).toFixed(2);
+  gastosGlobal = data.gastos ?? [];
+  document.getElementById("total_mes").innerText =
+    (data.total_mes ?? 0).toFixed(2);
 
   llenarTabla();
-
-  // Gráficos
   generarPie(data.categorias || {});
   generarBarMensual(data.mensual || {});
   generarLineaDiario(data.diario || {});
-
-  // KPIs resumen
   actualizarResumen(data);
 }
 
 /* ======== TABLA ======== */
 function llenarTabla() {
   const tabla = document.getElementById("tabla");
+
   tabla.innerHTML = `
     <tr>
-      <th>Comercio</th><th>Categoría</th>
-      <th>Total</th><th>Mi parte</th>
-      <th>Fecha</th><th>Acciones</th>
+      <th>Comercio</th>
+      <th>Categoría</th>
+      <th>Total</th>
+      <th>Mi parte</th>
+      <th>Fecha</th>
+      <th>Acciones</th>
     </tr>
   `;
+
   gastosGlobal.forEach(g => {
-    const miParte = (g.mi_parte != null ? g.mi_parte : g.valor);
+    const mi = g.mi_parte ?? g.valor;
+
     tabla.innerHTML += `
       <tr>
-       
         <td>${g.nombre_comercio}</td>
         <td>${g.categoria}</td>
-        <td>€${Number(g.valor || 0).toFixed(2)}</td>
-        <td><strong>€${Number(miParte || 0).toFixed(2)}</strong></td>
+        <td>€${Number(g.valor).toFixed(2)}</td>
+        <td><strong>€${Number(mi).toFixed(2)}</strong></td>
         <td>${g.created_at}</td>
         <td>
           <button onclick="editar(${g.id})">Editar</button>
@@ -505,113 +589,106 @@ function llenarTabla() {
 /* ======== GRÁFICOS ======== */
 function generarPie(categorias) {
   const ctx = document.getElementById("pieChart");
+
   if (pieChartInstance) pieChartInstance.destroy();
 
-  const labels = Object.keys(categorias);
-  const values = Object.values(categorias);
-
   pieChartInstance = new Chart(ctx, {
-    type: 'pie',
+    type: "pie",
     data: {
-      labels: labels,
+      labels: Object.keys(categorias),
       datasets: [{
-        data: values,
-        backgroundColor:["#0066cc","#00aa00","#cc6600","#999999","#9933cc","#ff9900"]
+        data: Object.values(categorias),
+        backgroundColor: [
+          "#0066cc","#00aa00","#cc6600","#999999","#9933cc","#ff9900"
+        ]
       }]
     }
   });
 }
 
-function generarBarMensual(mensual) {
+function generarBarMensual(m) {
   const ctx = document.getElementById("barMensual");
   if (barMensualInstance) barMensualInstance.destroy();
 
-  const labels = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-  const values = [];
-  for (let m=1; m<=12; m++) values.push(Number(mensual[m] || 0));
-
   barMensualInstance = new Chart(ctx, {
-    type: 'bar',
+    type: "bar",
     data: {
-      labels,
+      labels: ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],
       datasets: [{
         label: "Gasto mensual (mi parte)",
-        data: values,
+        data: Array.from({length:12},(_,i)=>m[i+1]||0),
         backgroundColor: "#0066cc"
       }]
     },
-    options: {
-      scales: {
-        y: { beginAtZero: true }
-      }
-    }
+    options: { scales: { y: { beginAtZero:true } } }
   });
 }
 
-function generarLineaDiario(diario) {
+function generarLineaDiario(d) {
   const ctx = document.getElementById("lineDiario");
   if (lineDiarioInstance) lineDiarioInstance.destroy();
 
-  const days = Object.keys(diario).map(d => Number(d)).sort((a,b)=>a-b);
-  const values = days.map(d => Number(diario[d] || 0));
+  const dias = Object.keys(d).map(Number).sort((a,b)=>a-b);
 
   lineDiarioInstance = new Chart(ctx, {
-    type: 'line',
+    type: "line",
     data: {
-      labels: days,
+      labels: dias,
       datasets: [{
         label: "Gasto diario (mi parte)",
-        data: values,
-        tension: 0.25,
+        data: dias.map(x=>d[x]),
         borderColor: "#00aa00",
         backgroundColor: "rgba(0,170,0,0.2)",
         pointRadius: 3,
-        pointBackgroundColor: "#00aa00"
       }]
     },
-    options: {
-      scales: {
-        y: { beginAtZero: true }
-      }
-    }
+    options: { scales: { y: { beginAtZero:true } } }
   });
 }
 
-/* ======== RESUMEN (KPIs) ======== */
+/* ======== KPIs ======== */
 function actualizarResumen(data) {
-  // Total seleccionado: suma de mi_parte de todos los gastos devueltos (ya filtrados)
-  const totalSelected = (data.gastos || []).reduce((acc, g) => {
-    const v = (g.mi_parte != null ? g.mi_parte : g.valor) || 0;
-    return acc + Number(v);
-  }, 0);
-  document.getElementById("res_total").innerText = totalSelected.toFixed(2);
+  const gastos = data.gastos || [];
 
-  // Día con más gasto (según 'diario')
-  let maxDia = "-", maxVal = 0;
+  const total = gastos.reduce(
+    (sum, g) => sum + (g.mi_parte ?? g.valor ?? 0),
+    0
+  );
+  document.getElementById("res_total").innerText = total.toFixed(2);
+
   const diario = data.diario || {};
-  Object.keys(diario).forEach(d => {
-    const v = Number(diario[d] || 0);
-    if (v > maxVal) { maxVal = v; maxDia = d; }
-  });
-  document.getElementById("res_max_dia").innerText = (maxDia === "-" ? "-" : `${maxDia} (€${maxVal.toFixed(2)})`);
+  let maxDia = "-", maxVal = 0;
 
-  // Media diaria: total / nº de días con gasto (clásico)
+  for (const d in diario) {
+    if (diario[d] > maxVal) {
+      maxVal = diario[d];
+      maxDia = d;
+    }
+  }
+
+  document.getElementById("res_max_dia").innerText =
+    maxDia === "-" ? "-" : `${maxDia} (€${maxVal.toFixed(2)})`;
+
   const diasConGasto = Object.keys(diario).length || 1;
-  const media = totalSelected / diasConGasto;
-  document.getElementById("res_media").innerText = media.toFixed(2);
+  document.getElementById("res_media").innerText =
+    (total / diasConGasto).toFixed(2);
 
-  // Categoría principal: mayor valor en 'categorias'
-  const catMap = data.categorias || {};
-  let catTop = "-", catTopVal = 0;
-  Object.keys(catMap).forEach(c => {
-    const v = Number(catMap[c] || 0);
-    if (v > catTopVal) { catTopVal = v; catTop = c; }
-  });
-  document.getElementById("res_cat_top").innerText = (catTop === "-" ? "-" : `${catTop} (€${catTopVal.toFixed(2)})`);
+  let topCat = "-";
+  let topVal = 0;
+
+  for (const cat in data.categorias || {}) {
+    if (data.categorias[cat] > topVal) {
+      topVal = data.categorias[cat];
+      topCat = cat;
+    }
+  }
+
+  document.getElementById("res_cat_top").innerText =
+    topCat === "-" ? "-" : `${topCat} (€${topVal.toFixed(2)})`;
 }
 
 /* ======== INICIO ======== */
-openTab('general');
+openTab("general");
 cargarDatos();
 
 </script>

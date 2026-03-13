@@ -7,7 +7,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field, condecimal
 import httpx
 from dotenv import load_dotenv
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from dateutil.parser import parse as parse_date
 
 # ================================
@@ -105,12 +105,14 @@ async def webhook_gasto(
     nombre = gasto.nombre_comercio.strip()
     if not nombre:
         raise HTTPException(status_code=422, detail="nombre_comercio vacío")
-
+    
+    categoria_auto = categorizar(nombre)
+    
     payload = {
         "nombre_comercio": nombre,
         "valor": amount,
         "mi_parte": mi_parte,
-        "categoria": None
+        "categoria": categoria_auto
     }
 
     url = f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLE}"
@@ -195,14 +197,32 @@ async def dashboard_data(
     if comercio:
         params["nombre_comercio"] = f"ilike.*{comercio}*"
 
+    
     # created_at puede repetirse en params sin problema
     if desde:
-        params.setdefault("created_at", [])
-        params["created_at"].append(f"gte.{desde}")
+        # Si te llega solo fecha, asegúrate de anclar al inicio del día
+        if len(desde) == 10:  # 'YYYY-MM-DD'
+            params.setdefault("created_at", [])
+            params["created_at"].append(f"gte.{desde}T00:00:00")
+        else:
+            params.setdefault("created_at", [])
+            params["created_at"].append(f"gte.{desde}")
 
     if hasta:
         params.setdefault("created_at", [])
-        params["created_at"].append(f"lte.{hasta}")
+        if len(hasta) == 10:  # 'YYYY-MM-DD'
+            # Rango half-open: [desde, hasta+1d)
+            try:
+                d = date.fromisoformat(hasta)
+                next_d = d + timedelta(days=1)
+                params["created_at"].append(f"lt.{next_d.isoformat()}T00:00:00")
+            except ValueError:
+                # fallback si fuese una fecha con hora
+                params["created_at"].append(f"lte.{hasta}")
+        else:
+            # Si llega con hora, respetamos lte
+            params["created_at"].append(f"lte.{hasta}")
+
 
     async with httpx.AsyncClient() as client:
         r = await client.get(url, headers=headers, params=params)
